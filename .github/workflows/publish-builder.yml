@@ -19,8 +19,21 @@ jobs:
     runs-on: ${{ matrix.runner }}
     steps:
       - uses: actions/checkout@v5
-      - name: Setup pack
-        uses: buildpacks/github-actions/setup-pack@v5.8.11
+      - name: Checkout pack (buildkit fork)
+        uses: actions/checkout@v5
+        with:
+          repository: jericop/pack
+          ref: buildkit-multi-arc-poc
+          path: pack-src
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: pack-src/go.mod
+      - name: Build pack from source
+        run: |
+          cd pack-src
+          go build -o /usr/local/bin/pack .
+          pack version
       - uses: azure/docker-login@v2
         with:
           username: ${{ secrets.PAKETO_BUILDPACKS_DOCKERHUB_USERNAME }}

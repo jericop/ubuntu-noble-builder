@@ -24,5 +24,7 @@ jobs:
         run: |
           pack builder create ${{ secrets.DOCKERHUB_ORG }}/ubuntu-noble-builder:skip-chown-poc \
             --config ./builders/builder/builder.toml \
+            --target linux/amd64 \
+            --target linux/arm64 \
             --publish
           echo "Published: ${{ secrets.DOCKERHUB_ORG }}/ubuntu-noble-builder:skip-chown-poc"

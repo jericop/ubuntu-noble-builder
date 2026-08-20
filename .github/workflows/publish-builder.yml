@@ -22,7 +22,13 @@ jobs:
       - name: Setup pack
         run: |
           PACK_VERSION=$(curl -s https://api.github.com/repos/buildpacks/pack/releases/latest | jq -r '.tag_name' | sed 's/^v//')
-          curl -sSL "https://github.com/buildpacks/pack/releases/download/v${PACK_VERSION}/pack-v${PACK_VERSION}-linux.tgz" | tar -xz -C /usr/local/bin
+          ARCH=$(dpkg --print-architecture)
+          if [ "$ARCH" = "arm64" ]; then
+            PACK_ARCHIVE="pack-v${PACK_VERSION}-linux-arm64.tgz"
+          else
+            PACK_ARCHIVE="pack-v${PACK_VERSION}-linux.tgz"
+          fi
+          curl -sSL "https://github.com/buildpacks/pack/releases/download/v${PACK_VERSION}/${PACK_ARCHIVE}" | tar -xz -C /usr/local/bin
           pack version
       - uses: azure/docker-login@v2
         with:

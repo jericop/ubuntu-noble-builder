@@ -20,16 +20,7 @@ jobs:
     steps:
       - uses: actions/checkout@v5
       - name: Setup pack
-        run: |
-          PACK_VERSION=$(curl -s https://api.github.com/repos/buildpacks/pack/releases/latest | jq -r '.tag_name' | sed 's/^v//')
-          ARCH=$(dpkg --print-architecture)
-          if [ "$ARCH" = "arm64" ]; then
-            PACK_ARCHIVE="pack-v${PACK_VERSION}-linux-arm64.tgz"
-          else
-            PACK_ARCHIVE="pack-v${PACK_VERSION}-linux.tgz"
-          fi
-          curl -sSL "https://github.com/buildpacks/pack/releases/download/v${PACK_VERSION}/${PACK_ARCHIVE}" | tar -xz -C /usr/local/bin
-          pack version
+        uses: buildpacks/github-actions/setup-pack@v5.8.11
       - uses: azure/docker-login@v2
         with:
           username: ${{ secrets.PAKETO_BUILDPACKS_DOCKERHUB_USERNAME }}

@@ -1,5 +1,4 @@
 name: publish-builder
-
 on:
   push:
     branches:
@@ -8,7 +7,16 @@ on:
 
 jobs:
   publish:
-    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - runner: ubuntu-latest
+            target: linux/amd64
+            tag-suffix: -amd64
+          - runner: ubuntu-24.04-arm
+            target: linux/arm64
+            tag-suffix: -arm64
+    runs-on: ${{ matrix.runner }}
     steps:
       - uses: actions/checkout@v5
       - name: Setup pack
@@ -22,9 +30,23 @@ jobs:
           password: ${{ secrets.PAKETO_BUILDPACKS_DOCKERHUB_PASSWORD }}
       - name: Create and publish builder
         run: |
-          pack builder create ${{ secrets.DOCKERHUB_ORG }}/ubuntu-noble-builder:skip-chown-poc \
+          pack builder create ${{ secrets.DOCKERHUB_ORG }}/ubuntu-noble-builder:skip-chown-poc${{ matrix.tag-suffix }} \
             --config ./builders/builder/builder.toml \
-            --target linux/amd64 \
-            --target linux/arm64 \
+            --target ${{ matrix.target }} \
             --publish
-          echo "Published: ${{ secrets.DOCKERHUB_ORG }}/ubuntu-noble-builder:skip-chown-poc"
+
+  manifest:
+    needs: publish
+    runs-on: ubuntu-latest
+    steps:
+      - uses: azure/docker-login@v2
+        with:
+          username: ${{ secrets.PAKETO_BUILDPACKS_DOCKERHUB_USERNAME }}
+          password: ${{ secrets.PAKETO_BUILDPACKS_DOCKERHUB_PASSWORD }}
+      - name: Create manifest list
+        run: |
+          docker manifest create ${{ secrets.DOCKERHUB_ORG }}/ubuntu-noble-builder:skip-chown-poc \
+            ${{ secrets.DOCKERHUB_ORG }}/ubuntu-noble-builder:skip-chown-poc-amd64 \
+            ${{ secrets.DOCKERHUB_ORG }}/ubuntu-noble-builder:skip-chown-poc-arm64
+          docker manifest push ${{ secrets.DOCKERHUB_ORG }}/ubuntu-noble-builder:skip-chown-poc
+          echo "Published manifest list: ${{ secrets.DOCKERHUB_ORG }}/ubuntu-noble-builder:skip-chown-poc"

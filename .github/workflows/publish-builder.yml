@@ -1,0 +1,69 @@
+name: publish-builder
+on:
+  push:
+    branches:
+      - skip-chown-lifecycle
+  workflow_dispatch:
+
+env:
+  # Builder image tag to publish. buildkit-multi-arch-poc bundles the
+  # jericop/lifecycle:buildkit-multi-arch-support lifecycle (with -pull-run-image),
+  # per builders/builder/builder.toml. Kept distinct from skip-chown-poc so the
+  # older builder (used by pr-compliance-app) is not overwritten.
+  BUILDER_TAG: buildkit-multi-arch-poc
+
+jobs:
+  publish:
+    strategy:
+      matrix:
+        include:
+          - runner: ubuntu-24.04
+            target: linux/amd64
+            tag-suffix: -amd64
+          - runner: ubuntu-24.04-arm
+            target: linux/arm64
+            tag-suffix: -arm64
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@v5
+      - name: Checkout pack (buildkit fork)
+        uses: actions/checkout@v5
+        with:
+          repository: jericop/pack
+          ref: buildkit-multi-arc-poc
+          path: pack-src
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: pack-src/go.mod
+      - name: Build pack from source
+        run: |
+          cd pack-src
+          go build -o /usr/local/bin/pack .
+          pack version
+      - uses: azure/docker-login@v2
+        with:
+          username: ${{ secrets.PAKETO_BUILDPACKS_DOCKERHUB_USERNAME }}
+          password: ${{ secrets.PAKETO_BUILDPACKS_DOCKERHUB_PASSWORD }}
+      - name: Create and publish builder
+        run: |
+          pack builder create ${{ secrets.DOCKERHUB_ORG }}/ubuntu-noble-builder:${BUILDER_TAG}${{ matrix.tag-suffix }} \
+            --config ./builders/builder/builder.toml \
+            --target ${{ matrix.target }} \
+            --publish
+
+  manifest:
+    needs: publish
+    runs-on: ubuntu-latest
+    steps:
+      - uses: azure/docker-login@v2
+        with:
+          username: ${{ secrets.PAKETO_BUILDPACKS_DOCKERHUB_USERNAME }}
+          password: ${{ secrets.PAKETO_BUILDPACKS_DOCKERHUB_PASSWORD }}
+      - name: Create manifest list
+        run: |
+          docker manifest create ${{ secrets.DOCKERHUB_ORG }}/ubuntu-noble-builder:${BUILDER_TAG} \
+            ${{ secrets.DOCKERHUB_ORG }}/ubuntu-noble-builder:${BUILDER_TAG}-amd64 \
+            ${{ secrets.DOCKERHUB_ORG }}/ubuntu-noble-builder:${BUILDER_TAG}-arm64
+          docker manifest push ${{ secrets.DOCKERHUB_ORG }}/ubuntu-noble-builder:${BUILDER_TAG}
+          echo "Published manifest list: ${{ secrets.DOCKERHUB_ORG }}/ubuntu-noble-builder:${BUILDER_TAG}"

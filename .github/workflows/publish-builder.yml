@@ -5,6 +5,13 @@ on:
       - skip-chown-lifecycle
   workflow_dispatch:
 
+env:
+  # Builder image tag to publish. buildkit-multi-arch-poc bundles the
+  # jericop/lifecycle:buildkit-multi-arch-support lifecycle (with -pull-run-image),
+  # per builders/builder/builder.toml. Kept distinct from skip-chown-poc so the
+  # older builder (used by pr-compliance-app) is not overwritten.
+  BUILDER_TAG: buildkit-multi-arch-poc
+
 jobs:
   publish:
     strategy:
@@ -40,7 +47,7 @@ jobs:
           password: ${{ secrets.PAKETO_BUILDPACKS_DOCKERHUB_PASSWORD }}
       - name: Create and publish builder
         run: |
-          pack builder create ${{ secrets.DOCKERHUB_ORG }}/ubuntu-noble-builder:skip-chown-poc${{ matrix.tag-suffix }} \
+          pack builder create ${{ secrets.DOCKERHUB_ORG }}/ubuntu-noble-builder:${BUILDER_TAG}${{ matrix.tag-suffix }} \
             --config ./builders/builder/builder.toml \
             --target ${{ matrix.target }} \
             --publish
@@ -55,8 +62,8 @@ jobs:
           password: ${{ secrets.PAKETO_BUILDPACKS_DOCKERHUB_PASSWORD }}
       - name: Create manifest list
         run: |
-          docker manifest create ${{ secrets.DOCKERHUB_ORG }}/ubuntu-noble-builder:skip-chown-poc \
-            ${{ secrets.DOCKERHUB_ORG }}/ubuntu-noble-builder:skip-chown-poc-amd64 \
-            ${{ secrets.DOCKERHUB_ORG }}/ubuntu-noble-builder:skip-chown-poc-arm64
-          docker manifest push ${{ secrets.DOCKERHUB_ORG }}/ubuntu-noble-builder:skip-chown-poc
-          echo "Published manifest list: ${{ secrets.DOCKERHUB_ORG }}/ubuntu-noble-builder:skip-chown-poc"
+          docker manifest create ${{ secrets.DOCKERHUB_ORG }}/ubuntu-noble-builder:${BUILDER_TAG} \
+            ${{ secrets.DOCKERHUB_ORG }}/ubuntu-noble-builder:${BUILDER_TAG}-amd64 \
+            ${{ secrets.DOCKERHUB_ORG }}/ubuntu-noble-builder:${BUILDER_TAG}-arm64
+          docker manifest push ${{ secrets.DOCKERHUB_ORG }}/ubuntu-noble-builder:${BUILDER_TAG}
+          echo "Published manifest list: ${{ secrets.DOCKERHUB_ORG }}/ubuntu-noble-builder:${BUILDER_TAG}"

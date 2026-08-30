@@ -2,7 +2,8 @@ name: publish-builder
 on:
   push:
     branches:
-      - skip-chown-lifecycle
+      # Consistent branch name across all three repos (pack + lifecycle + builder).
+      - buildkit-native-export
     tags:
       # Feature-line tags publish an immutable builder whose tag matches the git
       # tag verbatim, e.g. buildkit-native-export-v0.1.0 ->

@@ -44,7 +44,11 @@ description = "Ubuntu 24.04 Noble Numbat base image with buildpacks for Apache H
   version = "4.9.0"
 
 [lifecycle]
-  uri = "docker://docker.io/jericop/lifecycle:buildkit-multi-arch-support"
+  # Pinned to the buildkit-native-export lifecycle line: single builder-agnostic
+  # buildkit backend, prepared-metadata label, -skip-chown; no OCI-layout mode /
+  # -pull-run-image. Immutable semver tag published from the jericop/cnb-lifecycle
+  # buildkit-native-export-v0.1.0 git tag.
+  uri = "docker://docker.io/jericop/lifecycle:buildkit-native-export-v0.1.0"
 
 [[order]]
 

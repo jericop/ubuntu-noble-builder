@@ -3,14 +3,28 @@ on:
   push:
     branches:
       - skip-chown-lifecycle
+    tags:
+      # Feature-line tags publish an immutable builder whose tag matches the git
+      # tag verbatim, e.g. buildkit-native-export-v0.1.0 ->
+      # jericop/ubuntu-noble-builder:buildkit-native-export-v0.1.0. This bundles
+      # the matching jericop/lifecycle + jericop/pack pinned to the same tag.
+      - 'buildkit-native-export-v*'
   workflow_dispatch:
 
 env:
-  # Builder image tag to publish. buildkit-multi-arch-poc bundles the
-  # jericop/lifecycle:buildkit-multi-arch-support lifecycle (with -pull-run-image),
-  # per builders/builder/builder.toml. Kept distinct from skip-chown-poc so the
-  # older builder (used by pr-compliance-app) is not overwritten.
-  BUILDER_TAG: buildkit-multi-arch-poc
+  # Default builder image tag for branch pushes / manual runs. On a git-tag push
+  # this is overridden per-job by the tag name (see the "Resolve builder tag" step),
+  # so pack, lifecycle, and the builder share one tag string.
+  #
+  # NOTE: builders/builder/builder.toml pins [lifecycle].uri to
+  # jericop/lifecycle:buildkit-native-export-v0.1.0. Keep this default distinct
+  # from skip-chown-poc so the older builder (used by pr-compliance-app) is not
+  # overwritten.
+  DEFAULT_BUILDER_TAG: buildkit-native-export
+  # Pack fork ref built from source and used to `pack builder create`. Pinned to
+  # the buildkit-native-export line so the builder is created with the matching
+  # multi-arch pack.
+  PACK_REF: buildkit-native-export
 
 jobs:
   publish:
@@ -26,11 +40,22 @@ jobs:
     runs-on: ${{ matrix.runner }}
     steps:
       - uses: actions/checkout@v5
+      - name: Resolve builder tag
+        shell: bash
+        run: |
+          # On a git-tag push, publish under the tag verbatim so the builder tag
+          # matches the pinned lifecycle + pack tag. Otherwise use the default.
+          case "${GITHUB_REF}" in
+            refs/tags/*) BUILDER_TAG="${GITHUB_REF#refs/tags/}";;
+            *)           BUILDER_TAG="${DEFAULT_BUILDER_TAG}";;
+          esac
+          echo "BUILDER_TAG=${BUILDER_TAG}" >> "$GITHUB_ENV"
+          echo "Resolved BUILDER_TAG=${BUILDER_TAG}"
       - name: Checkout pack (buildkit fork)
         uses: actions/checkout@v5
         with:
           repository: jericop/pack
-          ref: buildkit-multi-arc-poc
+          ref: ${{ env.PACK_REF }}
           path: pack-src
       - name: Set up Go
         uses: actions/setup-go@v5
@@ -56,6 +81,15 @@ jobs:
     needs: publish
     runs-on: ubuntu-latest
     steps:
+      - name: Resolve builder tag
+        shell: bash
+        run: |
+          case "${GITHUB_REF}" in
+            refs/tags/*) BUILDER_TAG="${GITHUB_REF#refs/tags/}";;
+            *)           BUILDER_TAG="${DEFAULT_BUILDER_TAG}";;
+          esac
+          echo "BUILDER_TAG=${BUILDER_TAG}" >> "$GITHUB_ENV"
+          echo "Resolved BUILDER_TAG=${BUILDER_TAG}"
       - uses: azure/docker-login@v2
         with:
           username: ${{ secrets.PAKETO_BUILDPACKS_DOCKERHUB_USERNAME }}

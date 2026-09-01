@@ -4,7 +4,11 @@ description = "Ubuntu 24.04 Noble Numbat base image with no buildpacks included.
   image = "docker.io/paketobuildpacks/ubuntu-noble-build:0.0.114"
 
 [lifecycle]
-  uri = "docker://docker.io/jericop/lifecycle:skip-chown-poc"
+  # Moving branch tag (republished by publish-lifecycle.yml with ref=buildkit-native-export),
+  # matching the default builder. Publish the lifecycle before rebuilding this builder so
+  # it bundles the latest. Not immutable — pin a buildkit-native-export-v* tag if you need
+  # a reproducible builder.
+  uri = "docker://docker.io/jericop/lifecycle:buildkit-native-export"
 
 [run]
 

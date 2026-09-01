@@ -85,13 +85,16 @@ image, and — critically — the **lifecycle**:
 
 ```toml
 [lifecycle]
-  uri = "docker://docker.io/jericop/lifecycle:buildkit-native-export-v0.1.0"
+  uri = "docker://docker.io/jericop/lifecycle:buildkit-native-export"
 ```
 
-This pins the builder-agnostic buildkit lifecycle line: single `buildkit` backend,
+This points at the builder-agnostic buildkit lifecycle line: single `buildkit` backend,
 the `io.buildpacks.lifecycle.prepared-metadata` label, and `-skip-chown`, with no
-OCI-layout mode / `-pull-run-image`. It is an immutable semver tag published from
-the `jericop/cnb-lifecycle` `buildkit-native-export-v0.1.0` git tag.
+OCI-layout mode / `-pull-run-image`. It uses the MOVING branch tag
+(`jericop/lifecycle:buildkit-native-export`, republished by `publish-lifecycle.yml` with
+`ref=buildkit-native-export`) so a rebuilt builder always bundles the latest lifecycle
+from that branch. Trade-off: not immutable. Pin a `buildkit-native-export-v*` tag if you
+need a reproducible builder.
 
 The lifecycle images are published from the `jericop/cnb-lifecycle` repo (see its
 `.github/workflows/publish-lifecycle.yml` and its buildkit steering).
@@ -99,11 +102,12 @@ The lifecycle images are published from the `jericop/cnb-lifecycle` repo (see it
 ## Image tags
 
 - `jericop/ubuntu-noble-builder:buildkit-native-export` — current builder published
-  with `pack_ref=buildkit-native-export`, bundling the `buildkit-native-export-v0.1.0`
-  lifecycle. Multi-arch manifest (amd64 + arm64).
+  with `pack_ref=buildkit-native-export`, bundling the moving
+  `jericop/lifecycle:buildkit-native-export` lifecycle. Multi-arch manifest (amd64 + arm64).
 - `jericop/ubuntu-noble-builder:buildkit-native-export-v0.1.0` — immutable
-  semver-tagged builder published from the matching git tag; bundles the pinned
-  lifecycle + is created with the matching pack tag.
+  semver-tagged builder published from a matching git tag; if you cut one, pin the
+  `[lifecycle].uri` to the matching `buildkit-native-export-v*` lifecycle so the builder
+  is fully reproducible.
 - `jericop/ubuntu-noble-builder:skip-chown-poc` — original POC builder bundling the
   `skip-chown-poc` lifecycle (`-skip-chown` only). Kept distinct so it is not
   overwritten; used by `pr-compliance-app` CI.

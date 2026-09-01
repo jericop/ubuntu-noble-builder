@@ -1,31 +1,26 @@
 name: publish-builder
+# Manual only. Pass `pack_ref` (a branch or tag of jericop/pack); the builder is built
+# with a pack binary from that ref and the published builder image tag is DERIVED from
+# that ref. The builder repo itself (builder.toml + this workflow) is checked out from
+# whatever branch you run the workflow from.
 on:
-  push:
-    branches:
-      # Consistent branch name across all three repos (pack + lifecycle + builder).
-      - buildkit-native-export
-    tags:
-      # Feature-line tags publish an immutable builder whose tag matches the git
-      # tag verbatim, e.g. buildkit-native-export-v0.1.0 ->
-      # jericop/ubuntu-noble-builder:buildkit-native-export-v0.1.0. This bundles
-      # the matching jericop/lifecycle + jericop/pack pinned to the same tag.
-      - 'buildkit-native-export-v*'
   workflow_dispatch:
+    inputs:
+      pack_ref:
+        description: "jericop/pack git ref to build the pack binary from (branch or tag). The builder image tag is derived from this."
+        required: false
+        default: "buildkit-native-export"
 
 env:
-  # Default builder image tag for branch pushes / manual runs. On a git-tag push
-  # this is overridden per-job by the tag name (see the "Resolve builder tag" step),
-  # so pack, lifecycle, and the builder share one tag string.
-  #
   # NOTE: builders/builder/builder.toml pins [lifecycle].uri to
-  # jericop/lifecycle:buildkit-native-export-v0.1.0. Keep this default distinct
-  # from skip-chown-poc so the older builder (used by pr-compliance-app) is not
-  # overwritten.
+  # jericop/lifecycle:buildkit-native-export-v0.1.0. If you publish a builder under a
+  # different tag, make sure the bundled lifecycle tag is what you intend.
+  #
+  # The builder image tag is derived per-job from pack_ref (see "Resolve builder tag");
+  # this default only applies if pack_ref is somehow empty.
   DEFAULT_BUILDER_TAG: buildkit-native-export
-  # Pack fork ref built from source and used to `pack builder create`. Pinned to
-  # the buildkit-native-export line so the builder is created with the matching
-  # multi-arch pack.
-  PACK_REF: buildkit-native-export
+  # Pack fork ref built from source and used to `pack builder create`.
+  PACK_REF: ${{ github.event.inputs.pack_ref || 'buildkit-native-export' }}
 
 jobs:
   publish:
@@ -44,14 +39,17 @@ jobs:
       - name: Resolve builder tag
         shell: bash
         run: |
-          # On a git-tag push, publish under the tag verbatim so the builder tag
-          # matches the pinned lifecycle + pack tag. Otherwise use the default.
-          case "${GITHUB_REF}" in
-            refs/tags/*) BUILDER_TAG="${GITHUB_REF#refs/tags/}";;
-            *)           BUILDER_TAG="${DEFAULT_BUILDER_TAG}";;
+          # Derive the builder image tag from PACK_REF (the manually-provided pack ref).
+          # A semver-line ref (buildkit-native-export-v*) publishes under that tag
+          # verbatim so builder/lifecycle/pack share one immutable tag; any other ref
+          # (a branch) publishes a moving tag named after the ref.
+          REF="${PACK_REF:-$DEFAULT_BUILDER_TAG}"
+          case "${REF}" in
+            buildkit-native-export-v*) BUILDER_TAG="${REF}";;
+            *)                         BUILDER_TAG="${REF}";;
           esac
           echo "BUILDER_TAG=${BUILDER_TAG}" >> "$GITHUB_ENV"
-          echo "Resolved BUILDER_TAG=${BUILDER_TAG}"
+          echo "Resolved BUILDER_TAG=${BUILDER_TAG} (from PACK_REF=${PACK_REF})"
       - name: Checkout pack (buildkit fork)
         uses: actions/checkout@v5
         with:
@@ -85,12 +83,14 @@ jobs:
       - name: Resolve builder tag
         shell: bash
         run: |
-          case "${GITHUB_REF}" in
-            refs/tags/*) BUILDER_TAG="${GITHUB_REF#refs/tags/}";;
-            *)           BUILDER_TAG="${DEFAULT_BUILDER_TAG}";;
+          # Same derivation as the publish job: builder tag comes from PACK_REF.
+          REF="${PACK_REF:-$DEFAULT_BUILDER_TAG}"
+          case "${REF}" in
+            buildkit-native-export-v*) BUILDER_TAG="${REF}";;
+            *)                         BUILDER_TAG="${REF}";;
           esac
           echo "BUILDER_TAG=${BUILDER_TAG}" >> "$GITHUB_ENV"
-          echo "Resolved BUILDER_TAG=${BUILDER_TAG}"
+          echo "Resolved BUILDER_TAG=${BUILDER_TAG} (from PACK_REF=${PACK_REF})"
       - uses: azure/docker-login@v2
         with:
           username: ${{ secrets.PAKETO_BUILDPACKS_DOCKERHUB_USERNAME }}

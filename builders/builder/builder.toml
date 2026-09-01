@@ -44,11 +44,14 @@ description = "Ubuntu 24.04 Noble Numbat base image with buildpacks for Apache H
   version = "4.9.0"
 
 [lifecycle]
-  # Pinned to the buildkit-native-export lifecycle line: single builder-agnostic
+  # Points at the buildkit-native-export lifecycle line: single builder-agnostic
   # buildkit backend, prepared-metadata label, -skip-chown; no OCI-layout mode /
-  # -pull-run-image. Immutable semver tag published from the jericop/cnb-lifecycle
-  # buildkit-native-export-v0.1.0 git tag.
-  uri = "docker://docker.io/jericop/lifecycle:buildkit-native-export-v0.1.0"
+  # -pull-run-image. This is the MOVING branch tag (republished by publish-lifecycle.yml
+  # with ref=buildkit-native-export), so the builder always bundles the latest lifecycle
+  # from that branch. Trade-off: not immutable — republishing the lifecycle changes what
+  # a rebuilt builder bundles. Pin a buildkit-native-export-v* tag instead if you need a
+  # reproducible builder.
+  uri = "docker://docker.io/jericop/lifecycle:buildkit-native-export"
 
 [[order]]
 

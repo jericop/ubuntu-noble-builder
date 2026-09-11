@@ -12,8 +12,8 @@ on:
         default: "buildkit-native-export"
 
 env:
-  # NOTE: builders/builder/builder.toml pins [lifecycle].uri to
-  # jericop/lifecycle:buildkit-native-export-v0.1.0. If you publish a builder under a
+  # NOTE: builders/builder/builder.toml pins [lifecycle].uri to the moving tag
+  # jericop/lifecycle:buildkit-native-export. If you publish a builder under a
   # different tag, make sure the bundled lifecycle tag is what you intend.
   #
   # The builder image tag is derived per-job from pack_ref (see "Resolve builder tag");

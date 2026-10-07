@@ -18,8 +18,9 @@ jobs:
       builders: ${{ steps.get-builders.outputs.builders }}
     steps:
     - name: Checkout
-      uses: actions/checkout@v6
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       with:
+        token: ${{ secrets.PAKETO_BOT_GITHUB_TOKEN }}
         fetch-depth: 0
 
     - name: Get Builders
@@ -82,7 +83,9 @@ jobs:
 
     steps:
     - name: Check out
-      uses: actions/checkout@v6
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      with:
+        token: ${{ secrets.PAKETO_BOT_GITHUB_TOKEN }}
 
     - name: Checkout branch
       uses: paketo-buildpacks/github-config/actions/pull-request/checkout-branch@main
@@ -116,7 +119,7 @@ jobs:
     needs: update
     steps:
     - name: Check out
-      uses: actions/checkout@v6
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
     - name: Checkout branch
       uses: paketo-buildpacks/github-config/actions/pull-request/checkout-branch@main

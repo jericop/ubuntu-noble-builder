@@ -18,8 +18,9 @@ jobs:
       builders: ${{ steps.get-builders.outputs.builders }}
     steps:
     - name: Checkout
-      uses: actions/checkout@v6
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       with:
+        persist-credentials: false
         fetch-depth: 0
 
     - name: Get Builders
@@ -57,6 +58,7 @@ jobs:
       uses: paketo-buildpacks/github-config/actions/pull-request/checkout-branch@main
       with:
         branch: "automation/builder-toml-update"
+        token: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Rebase branch
       uses: paketo-buildpacks/github-config/actions/pull-request/rebase-branch@main
@@ -69,6 +71,7 @@ jobs:
       uses: paketo-buildpacks/github-config/actions/pull-request/push-branch@main
       with:
         branch: "automation/builder-toml-update"
+        token: ${{ secrets.PAKETO_BOT_GITHUB_TOKEN }}
         force: true
 
   update:
@@ -82,12 +85,15 @@ jobs:
 
     steps:
     - name: Check out
-      uses: actions/checkout@v6
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      with:
+        persist-credentials: false
 
     - name: Checkout branch
       uses: paketo-buildpacks/github-config/actions/pull-request/checkout-branch@main
       with:
         branch: "automation/builder-toml-update"
+        token: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Update builder.toml
       uses: paketo-buildpacks/github-config/actions/builder/update@main
@@ -109,6 +115,7 @@ jobs:
       uses: paketo-buildpacks/github-config/actions/pull-request/push-branch@main
       with:
         branch: "automation/builder-toml-update"
+        token: ${{ secrets.PAKETO_BOT_GITHUB_TOKEN }}
 
   open-pull-request:
     name: Open pull request
@@ -116,12 +123,15 @@ jobs:
     needs: update
     steps:
     - name: Check out
-      uses: actions/checkout@v6
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      with:
+        persist-credentials: false
 
     - name: Checkout branch
       uses: paketo-buildpacks/github-config/actions/pull-request/checkout-branch@main
       with:
         branch: "automation/builder-toml-update"
+        token: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Check if branch has commits
       id: check-if-commits
@@ -148,6 +158,8 @@ jobs:
     runs-on: ubuntu-24.04
     needs: [update, open-pull-request]
     if: ${{ always() && ( needs.update.result == 'failure' || needs.open-pull-request.result == 'failure' ) }}
+    permissions:
+      issues: write
     steps:
     - name: File Failure Alert Issue
       uses: paketo-buildpacks/github-config/actions/issue/file@main
